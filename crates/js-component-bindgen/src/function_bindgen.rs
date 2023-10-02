@@ -313,29 +313,29 @@ impl Bindgen for FunctionBindgen<'_> {
                 // use destructuring field access to get each
                 // field individually.
                 let tmp = self.tmp();
-                let mut expr = "const {".to_string();
+                let mut expr = "const [".to_string();
                 for (i, field) in record.fields.iter().enumerate() {
                     if i > 0 {
                         expr.push_str(", ");
                     }
                     let name = format!("v{}_{}", tmp, i);
-                    expr.push_str(&field.name.to_lower_camel_case());
-                    expr.push_str(": ");
+                    // expr.push_str(&field.name.to_lower_camel_case());
+                    // expr.push_str(": ");
                     expr.push_str(&name);
                     results.push(name);
                 }
-                uwrite!(self.src, "{} }} = {};\n", expr, operands[0]);
+                uwrite!(self.src, "{} ] = {};\n", expr, operands[0]);
             }
 
             Instruction::RecordLift { record, .. } => {
                 // records are represented as plain objects, so we
                 // make a new object and set all the fields with an object
                 // literal.
-                let mut result = "{\n".to_string();
+                let mut result = "[\n".to_string();
                 for (field, op) in record.fields.iter().zip(operands) {
-                    result.push_str(&format!("{}: {},\n", field.name.to_lower_camel_case(), op));
+                    result.push_str(&format!("{},\n", op));
                 }
-                result.push_str("}");
+                result.push_str("]");
                 results.push(result);
             }
 
