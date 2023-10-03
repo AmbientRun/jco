@@ -459,13 +459,15 @@ impl Bindgen for FunctionBindgen<'_> {
                     results.push(format!("variant{}_{}", tmp, i));
                 }
 
-                let expr_to_match = format!("variant{}.tag", tmp);
+                let expr_to_match = format!("variant{tmp}[0]");
 
                 uwriteln!(self.src, "switch ({expr_to_match}) {{");
-                for (case, (block, block_results)) in variant.cases.iter().zip(blocks) {
-                    uwriteln!(self.src, "case '{}': {{", case.name.as_str());
+                for (i, (case, (block, block_results))) in
+                    variant.cases.iter().zip(blocks).enumerate()
+                {
+                    uwriteln!(self.src, "case {}: {{", i);
                     if case.ty.is_some() {
-                        uwriteln!(self.src, "const e = variant{tmp}.val;");
+                        uwriteln!(self.src, "const e = variant{tmp}[1];");
                     }
                     self.src.push_str(&block);
 
@@ -482,7 +484,7 @@ impl Bindgen for FunctionBindgen<'_> {
                 uwriteln!(
                     self.src,
                     "default: {{
-                        throw new TypeError('invalid variant specified for {variant_name}');
+                        throw new TypeError(`invalid variant specified for {variant_name}: \"${{variant{tmp}}}\" `);
                     }}"
                 );
                 uwriteln!(self.src, "}}");
@@ -511,18 +513,18 @@ impl Bindgen for FunctionBindgen<'_> {
                         self.src,
                         "case {i}: {{
                             {block}\
-                            variant{tmp} = {{
-                                tag: '{tag}',"
+                            variant{tmp} = [
+                                {i},"
                     );
                     if case.ty.is_some() {
                         assert!(block_results.len() == 1);
-                        uwriteln!(self.src, "   val: {}", block_results[0]);
+                        uwriteln!(self.src, "   {}", block_results[0]);
                     } else {
                         assert!(block_results.len() == 0);
                     }
                     uwriteln!(
                         self.src,
-                        "   }};
+                        "   ];
                         break;
                         }}"
                     );
@@ -532,7 +534,7 @@ impl Bindgen for FunctionBindgen<'_> {
                     uwriteln!(
                         self.src,
                         "default: {{
-                            throw new TypeError('invalid variant discriminant for {variant_name}');
+                            throw new TypeError(`invalid variant discriminant for {variant_name}:  ${{ {operand} }}`);
                         }}"
                     );
                 }
@@ -779,11 +781,10 @@ impl Bindgen for FunctionBindgen<'_> {
                 for (i, case) in enum_.cases.iter().enumerate() {
                     uwriteln!(
                         self.src,
-                        "case '{case}': {{
+                        "case {i}: {{
                             enum{tmp} = {i};
                             break;
                         }}",
-                        case = case.name
                     );
                 }
                 uwriteln!(self.src, "default: {{");
@@ -819,10 +820,9 @@ impl Bindgen for FunctionBindgen<'_> {
                     uwriteln!(
                         self.src,
                         "case {i}: {{
-                            enum{tmp} = '{case}';
+                            enum{tmp} = {i};
                             break;
                         }}",
-                        case = case.name
                     );
                 }
                 if !self.valid_lifting_optimization {
