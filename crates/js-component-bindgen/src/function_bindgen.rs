@@ -679,14 +679,14 @@ impl Bindgen for FunctionBindgen<'_> {
 
                 uwriteln!(
                     self.src,
-                    "switch (variant{tmp}.tag) {{
-                        case 'ok': {{
-                            const e = variant{tmp}.val;
+                    "switch (variant{tmp}[0]) {{
+                        case 0: {{
+                            const e = variant{tmp}[1];
                             {ok}\
                             break;
                         }}
-                        case 'err': {{
-                            const e = variant{tmp}.val;
+                        case 1: {{
+                            const e = variant{tmp}[1];
                             {err}\
                             break;
                         }}
@@ -724,18 +724,12 @@ impl Bindgen for FunctionBindgen<'_> {
                         switch ({op0}) {{
                             case 0: {{
                                 {ok}\
-                                variant{tmp} = {{
-                                    tag: 'ok',
-                                    val: {ok_result}
-                                }};
+                                variant{tmp} = [ 0, {ok_result} ];
                                 break;
                             }}
                             case 1: {{
                                 {err}\
-                                variant{tmp} = {{
-                                    tag: 'err',
-                                    val: {err_result}
-                                }};
+                                variant{tmp} = [ 1, {err_result} ];
                                 break;
                             }}
                             default: {{
@@ -749,16 +743,16 @@ impl Bindgen for FunctionBindgen<'_> {
                         "let variant{tmp};
                         if ({op0}) {{
                             {err}\
-                            variant{tmp} = {{
-                                tag: 'err',
-                                val: {err_result}
-                            }};
+                            variant{tmp} = [
+                                1,
+                                {err_result}
+                            ];
                         }} else {{
                             {ok}\
-                            variant{tmp} = {{
-                                tag: 'ok',
-                                val: {ok_result}
-                            }};
+                            variant{tmp} = [
+                                0
+                                {ok_result}
+                            ];
                         }}"
                     );
                 }
@@ -1028,9 +1022,9 @@ impl Bindgen for FunctionBindgen<'_> {
                         self.src,
                         "let ret;
                         try {{
-                            ret = {{ tag: 'ok', val: {}({}) }};
+                            ret = [ 0, {}({}) ]
                         }} catch (e) {{
-                            ret = {{ tag: 'err', val: {}(e) }};
+                            ret = [ 1, {}(e) ]
                         }}",
                         self.callee,
                         operands.join(", "),
@@ -1076,11 +1070,12 @@ impl Bindgen for FunctionBindgen<'_> {
                     let component_err = self.intrinsic(Intrinsic::ComponentError);
                     let operand = &operands[0];
                     uwriteln!(
+                        // Rethrow a rust error in js
                         self.src,
-                        "if ({operand}.tag === 'err') {{
-                            throw new {component_err}({operand}.val);
+                        "if ({operand}[0] === 1) {{
+                            throw new {component_err}({operand}[1]);
                         }}
-                        return {operand}.val;"
+                        return {operand}[1];"
                     );
                 } else {
                     match amt {
